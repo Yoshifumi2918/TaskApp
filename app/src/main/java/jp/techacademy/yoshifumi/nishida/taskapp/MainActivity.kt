@@ -12,6 +12,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.widget.EditText
+import kotlinx.android.synthetic.main.content_input.*
 
 
 const val EXTRA_TASK = "jp.techacademy.yoshifumi.nishida.taskapp.TASK"
@@ -96,20 +97,42 @@ class MainActivity : AppCompatActivity() {
             true
         }
 
+       search.setOnClickListener {
+
+           //テキストに文字を入力し、検索ボタンを押した時にカテゴリー順にリストを上から表示する
+
+           val category = title_edit_text.text.toString()
+           //カテゴリーのデータを取得
+
+
+           val search = mRealm.where(Task::class.java).findAll().sort("category", Sort.DESCENDING)
+           // Realmデータベースから、「すべてのデータを取得して新しいカテゴリー順に並べた結果」を取得
+
+           val results = mRealm.where(Task::class.java).equalTo("category","" ).findAll()
+           //カテゴリーで検索した際の全ての情報を取得
+
+           // 上記の検索結果を、TaskListとしてセットする
+           mTaskAdapter.mTaskList = mRealm.copyFromRealm(search)
+
+           // TaskのListView用のアダプタに渡す
+           listView1.adapter = mTaskAdapter
+
+           // 表示を更新するために、アダプターにデータが変更されたことを知らせる
+           mTaskAdapter.notifyDataSetChanged()
+
+
+
+
+
+       }
+
         reloadListView()
     }
 
 
-   open class Query : Task() {
-        //検索をかけた際にリストを上から表示する
 
-        // EditTextの文字列をTextViewに設定
-        val search = findViewById<EditText>(R.id.search)
 
-        RealmResult<Query> query = realm.where(Query.
-        class).equalTo("category", "").findAll();
 
-    }
 
 
 
