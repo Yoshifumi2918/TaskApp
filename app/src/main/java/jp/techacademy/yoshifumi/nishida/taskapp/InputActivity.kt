@@ -1,7 +1,5 @@
 package jp.techacademy.yoshifumi.nishida.taskapp
 
-
-
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -11,6 +9,9 @@ import android.view.View
 import io.realm.Realm
 import kotlinx.android.synthetic.main.content_input.*
 import java.util.*
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Intent
 
 class InputActivity : AppCompatActivity() {
 
@@ -27,9 +28,13 @@ class InputActivity : AppCompatActivity() {
                 mYear = year
                 mMonth = month
                 mDay = dayOfMonth
-                val dateString = mYear.toString() + "/" + String.format("%02d", mMonth + 1) + "/" + String.format("%02d", mDay)
+                val dateString = mYear.toString() + "/" + String.format(
+                    "%02d",
+                    mMonth + 1
+                ) + "/" + String.format("%02d", mDay)
                 date_button.text = dateString
-            }, mYear, mMonth, mDay)
+            }, mYear, mMonth, mDay
+        )
         datePickerDialog.show()
     }
 
@@ -40,7 +45,8 @@ class InputActivity : AppCompatActivity() {
                 mMinute = minute
                 val timeString = String.format("%02d", mHour) + ":" + String.format("%02d", mMinute)
                 times_button.text = timeString
-            }, mHour, mMinute, false)
+            }, mHour, mMinute, false
+        )
         timePickerDialog.show()
     }
 
@@ -93,7 +99,10 @@ class InputActivity : AppCompatActivity() {
             mHour = calendar.get(Calendar.HOUR_OF_DAY)
             mMinute = calendar.get(Calendar.MINUTE)
 
-            val dateString = mYear.toString() + "/" + String.format("%02d", mMonth + 1) + "/" + String.format("%02d", mDay)
+            val dateString = mYear.toString() + "/" + String.format(
+                "%02d",
+                mMonth + 1
+            ) + "/" + String.format("%02d", mDay)
             val timeString = String.format("%02d", mHour) + ":" + String.format("%02d", mMinute)
 
             date_button.text = dateString
@@ -101,38 +110,54 @@ class InputActivity : AppCompatActivity() {
         }
     }
 
-    private fun addTask() {
-        val realm = Realm.getDefaultInstance()
 
-        realm.beginTransaction()
 
-        if (mTask == null) {
-            // 新規作成の場合
-            mTask = Task()
+        private fun addTask() {
+            val realm = Realm.getDefaultInstance()
 
-            val taskRealmResults = realm.where(Task::class.java).findAll()
+            realm.beginTransaction()
 
-            val identifier: Int =
-                if (taskRealmResults.max("id") != null) {
-                    taskRealmResults.max("id")!!.toInt() + 1
-                } else {
-                    0
-                }
-            mTask!!.id = identifier
+            if (mTask == null) {
+                // 新規作成の場合
+                mTask = Task()
+
+                val taskRealmResults = realm.where(Task::class.java).findAll()
+
+                val identifier: Int =
+                    if (taskRealmResults.max("id") != null) {
+                        taskRealmResults.max("id")!!.toInt() + 1
+                    } else {
+                        0
+                    }
+                mTask!!.id = identifier
+            }
+
+            val title = title_edit_text.text.toString()
+            val content = content_edit_text.text.toString()
+
+            mTask!!.title = title
+            mTask!!.contents = content
+            val calendar = GregorianCalendar(mYear, mMonth, mDay, mHour, mMinute)
+            val date = calendar.time
+            mTask!!.date = date
+
+            realm.copyToRealmOrUpdate(mTask!!)
+            realm.commitTransaction()
+
+            realm.close()
+
+            val resultIntent = Intent(applicationContext, TaskAlarmReceiver::class.java)
+            resultIntent.putExtra(EXTRA_TASK, mTask!!.id)
+            val resultPendingIntent = PendingIntent.getBroadcast(
+                this,
+                mTask!!.id,
+                resultIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT
+            )
+
+            val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+            alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, resultPendingIntent)
         }
-
-        val title = title_edit_text.text.toString()
-        val content = content_edit_text.text.toString()
-
-        mTask!!.title = title
-        mTask!!.contents = content
-        val calendar = GregorianCalendar(mYear, mMonth, mDay, mHour, mMinute)
-        val date = calendar.time
-        mTask!!.date = date
-
-        realm.copyToRealmOrUpdate(mTask!!)
-        realm.commitTransaction()
-
-        realm.close()
     }
-}
+
+
