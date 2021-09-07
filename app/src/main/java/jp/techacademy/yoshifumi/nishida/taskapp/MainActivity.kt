@@ -8,6 +8,13 @@ import io.realm.RealmChangeListener
 import io.realm.Sort
 import android.content.Intent
 import androidx.appcompat.app.AlertDialog
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.widget.EditText
+
+
+const val EXTRA_TASK = "jp.techacademy.yoshifumi.nishida.taskapp.TASK"
 
 class MainActivity : AppCompatActivity() {
    private lateinit var mRealm: Realm
@@ -20,8 +27,6 @@ class MainActivity : AppCompatActivity() {
 
 
     private lateinit var mTaskAdapter: TaskAdapter
-
-     const val EXTRA_TASK = "jp.techacademy.yoshifumi.nishida.taskapp.TASK"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,6 +71,20 @@ class MainActivity : AppCompatActivity() {
                 results.deleteAllFromRealm()
                 mRealm.commitTransaction()
 
+
+                val resultIntent = Intent(applicationContext, TaskAlarmReceiver::class.java)
+                val resultPendingIntent = PendingIntent.getBroadcast(
+                    this,
+                    task.id,
+                    resultIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT
+                )
+
+                val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+                alarmManager.cancel(resultPendingIntent)
+
+
+
                 reloadListView()
             }
 
@@ -80,6 +99,20 @@ class MainActivity : AppCompatActivity() {
         reloadListView()
     }
 
+
+   open class Query : Task() {
+        //検索をかけた際にリストを上から表示する
+
+        // EditTextの文字列をTextViewに設定
+        val search = findViewById<EditText>(R.id.search)
+
+        RealmResult<Query> query = realm.where(Query.
+        class).equalTo("category", "").findAll();
+
+    }
+
+
+
     private fun reloadListView() {
         // Realmデータベースから、「すべてのデータを取得して新しい日時順に並べた結果」を取得
         val taskRealmResults = mRealm.where(Task::class.java).findAll().sort("date", Sort.DESCENDING)
@@ -92,7 +125,12 @@ class MainActivity : AppCompatActivity() {
 
         // 表示を更新するために、アダプターにデータが変更されたことを知らせる
         mTaskAdapter.notifyDataSetChanged()
+
+
     }
+
+
+
 
     override fun onDestroy() {
         super.onDestroy()
